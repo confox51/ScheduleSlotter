@@ -89,16 +89,12 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
 st.title("Free Time Slot Finder")
 st.write("Find available time slots in your calendar within a specified date range.")
 
-# Default ICS URL (from the provided example)
-default_ics_url = "https://outlook.office365.com/owa/calendar/4ad02a7e9e6f42c78ca2d4315deb9db2@mit.edu/c10ddb3f0fc44257a81eed8e7d7f1a545527055253664937927/calendar.ics"
-
 # Input form
 with st.form(key="free_time_form"):
-    # ICS URL input (read-only/greyed out)
+    # ICS URL input
     ics_url = st.text_input("ICS Calendar URL", 
-                           value=default_ics_url, 
-                           disabled=True,
-                           help="The URL of the ICS calendar file (read-only)")
+                           placeholder="Enter your ICS calendar URL",
+                           help="The URL of the ICS calendar file")
     
     # Create a row with two columns for date pickers
     col1, col2 = st.columns(2)
