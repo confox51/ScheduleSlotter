@@ -9,9 +9,10 @@ import icalendar
 st.set_page_config(page_title="Free Time Slot Finder", layout="wide")
 
 # Function to get free times (from the provided code)
-def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_start_hour=9, work_end_hour=17, timezone="ET"):
+def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_start_hour=9, work_end_hour=17, timezone="ET", delay_before=0, delay_after=0):
     """
-    Retrieves free time slots between user-defined working hours for each date within a range.
+    Retrieves free time slots between user-defined working hours for each date within a range,
+    including buffer times before and after meetings.
 
     Args:
         ics_url: URL of the ICS calendar file.
@@ -20,6 +21,8 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
         work_start_hour: Starting hour of working time (0-23).
         work_end_hour: Ending hour of working time (0-23).
         timezone: Timezone display label (e.g., "ET", "PT", "GMT").
+        delay_before: Buffer time in minutes to add before each scheduled event (0-60).
+        delay_after: Buffer time in minutes to add after each scheduled event (0-60).
 
     Returns:
         A dictionary where keys are dates and values are lists of free time slots 
@@ -56,18 +59,26 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
         for event in events_for_day:
             event_start = event["DTSTART"].dt.replace(tzinfo=None)  # Remove timezone for comparison
             event_end = event["DTEND"].dt.replace(tzinfo=None)  # Remove timezone for comparison
+            
+            # Apply buffer time before and after events
+            buffer_before = datetime.timedelta(minutes=delay_before)
+            buffer_after = datetime.timedelta(minutes=delay_after)
+            
+            # Adjust event times to include buffer
+            adjusted_start = event_start - buffer_before
+            adjusted_end = event_end + buffer_after
 
             updated_free_times = []
             for start, end in free_times:
-                if event_start >= end or event_end <= start:
+                if adjusted_start >= end or adjusted_end <= start:
                     # Event outside current free slot, keep the slot
                     updated_free_times.append((start, end))
                 else:
                     # Event overlaps current free slot, split the slot
-                    if event_start > start:
-                        updated_free_times.append((start, event_start))
-                    if event_end < end:
-                        updated_free_times.append((event_end, end))
+                    if adjusted_start > start:
+                        updated_free_times.append((start, adjusted_start))
+                    if adjusted_end < end:
+                        updated_free_times.append((adjusted_end, end))
             free_times = updated_free_times
 
         free_times_by_date[current_date] = free_times  # Store free times for current date
@@ -108,7 +119,7 @@ with st.form(key="free_time_form"):
                                  value=default_end,
                                  help="Select the end date for checking free time slots")
     
-    # Create a row with two columns for working hours and timezone
+    # Create a row with three columns for working hours and timezone
     st.write("**Working Hours & Timezone**")
     work_hours_col1, work_hours_col2, timezone_col = st.columns(3)
     
@@ -137,6 +148,28 @@ with st.form(key="free_time_form"):
                                options=timezone_options,
                                index=0,
                                help="Select your timezone")
+                               
+    # Create a row for meeting buffer times
+    st.write("**Meeting Buffer Times**")
+    buffer_col1, buffer_col2 = st.columns(2)
+    
+    with buffer_col1:
+        # Buffer time before meetings
+        delay_before = st.select_slider(
+            "Buffer Time Before (minutes)",
+            options=[0, 15, 30, 45, 60],
+            value=0,
+            help="Add buffer time before scheduled meetings"
+        )
+    
+    with buffer_col2:
+        # Buffer time after meetings
+        delay_after = st.select_slider(
+            "Buffer Time After (minutes)",
+            options=[0, 15, 30, 45, 60],
+            value=0,
+            help="Add buffer time after scheduled meetings"
+        )
     
     # Submit button
     submit_button = st.form_submit_button(label="Find Free Time Slots")
@@ -157,14 +190,16 @@ if submit_button:
                 start_date_str = start_date.strftime("%Y-%m-%d")
                 end_date_str = end_date.strftime("%Y-%m-%d")
                 
-                # Call the function to get free times with customized working hours and timezone
+                # Call the function to get free times with customized working hours, timezone and buffer times
                 free_times_by_date = get_free_times_for_date_range(
                     ics_url, 
                     start_date_str, 
                     end_date_str,
                     work_start_hour,
                     work_end_hour,
-                    timezone
+                    timezone,
+                    delay_before,
+                    delay_after
                 )
                 
                 # Display results
@@ -219,5 +254,6 @@ if submit_button:
 st.info("""
 **Note**: This application displays free time slots between your selected working hours for the selected date range.
 It uses the calendar data from the provided ICS URL to determine availability.
-You can customize your working hours and timezone using the input fields above.
+You can customize your working hours, timezone, and buffer times using the input fields above.
+Buffer times allow you to add padding before and after scheduled meetings to ensure adequate preparation and transition time.
 """)
