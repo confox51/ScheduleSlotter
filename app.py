@@ -94,7 +94,7 @@ with st.form(key="free_time_form"):
     # ICS URL input
     ics_url = st.text_input("ICS Calendar URL", 
                            placeholder="Enter your ICS calendar URL",
-                           help="The URL of the ICS calendar file")
+                           help="The URL of the ICS calendar file. [Learn how to find your ICS URL](https://www.perplexity.ai/search/how-to-find-publishable-ics-ur-oijl73h7RFmMVIhskSks8g)")
     
     # Create a row with two columns for date pickers
     col1, col2 = st.columns(2)
