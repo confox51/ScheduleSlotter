@@ -135,25 +135,36 @@ if submit_button:
                         st.info("No free time slots found in the selected date range.")
                     else:
                         for date, free_times in free_times_by_date.items():
-                            # Format the date
-                            formatted_date = date.strftime("%A, %B %d, %Y")
+                            # Format the date in the requested format: M/D (Weekday)
+                            weekday = date.strftime("%a")[:3]  # First 3 letters of weekday
+                            formatted_date = f"{date.month}/{date.day} ({weekday})"
                             
                             if not free_times:
                                 st.write(f"**{formatted_date}**: No free time slots available")
                             else:
-                                st.write(f"**{formatted_date}**")
-                                
                                 # Create formatted list of time slots
                                 time_slots = []
                                 for start, end in free_times:
-                                    # Format times to be more readable
-                                    formatted_start = start.strftime("%I:%M %p")
-                                    formatted_end = end.strftime("%I:%M %p")
-                                    time_slots.append(f"{formatted_start} - {formatted_end}")
+                                    # Format times in a more compact way (9a, 10:30a, 2p, etc.)
+                                    start_hour = int(start.strftime("%I"))
+                                    start_min = start.strftime("%M")
+                                    start_ampm = start.strftime("%p").lower()[0]  # 'a' or 'p'
+                                    
+                                    end_hour = int(end.strftime("%I"))
+                                    end_min = end.strftime("%M")
+                                    end_ampm = end.strftime("%p").lower()[0]  # 'a' or 'p'
+                                    
+                                    # Format with or without minutes
+                                    start_fmt = f"{start_hour}:{start_min}{start_ampm}" if start_min != "00" else f"{start_hour}{start_ampm}"
+                                    end_fmt = f"{end_hour}:{end_min}{end_ampm}" if end_min != "00" else f"{end_hour}{end_ampm}"
+                                    
+                                    time_slots.append(f"{start_fmt}-{end_fmt}")
                                 
-                                # Display as a bulleted list
-                                for slot in time_slots:
-                                    st.write(f"• {slot}")
+                                # Join all time slots with commas
+                                time_slots_str = ", ".join(time_slots)
+                                
+                                # Display in the requested format
+                                st.write(f"**{formatted_date}**: {time_slots_str} ET")
                                 
                                 st.write("---")  # Add a separator between dates
                 
