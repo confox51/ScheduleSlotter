@@ -1,4 +1,3 @@
-
 # Free Time Slot Finder
 
 A Streamlit web application that helps users find available time slots in their calendar within a specified date range.
@@ -32,10 +31,13 @@ Built with:
 
 ## Running the Application
 
-The application runs on port 5000. To start the application:
-
+Before first run, install dependencies:
 ```bash
-streamlit run app.py --server.port 5000
+pip install -r requirements.txt
+```
+The application runs on port 8501 by default. To start the application:
+```bash
+streamlit run app.py
 ```
 
 ## Output Format
