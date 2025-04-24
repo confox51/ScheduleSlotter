@@ -9,14 +9,18 @@ import icalendar
 st.set_page_config(page_title="Free Time Slot Finder", layout="wide")
 
 # Function to get free times (from the provided code)
-def get_free_times_for_date_range(ics_url, start_date_str, end_date_str):
+def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_start_hour=9, work_start_minute=0, work_end_hour=17, work_end_minute=0):
     """
-    Retrieves free time slots between 9 am and 5 pm for each date within a range.
+    Retrieves free time slots between user-defined working hours for each date within a range.
 
     Args:
         ics_url: URL of the ICS calendar file.
         start_date_str: Start date string in YYYY-MM-DD format.
         end_date_str: End date string in YYYY-MM-DD format.
+        work_start_hour: Starting hour of working time (0-23).
+        work_start_minute: Starting minute of working time (0-59).
+        work_end_hour: Ending hour of working time (0-23).
+        work_end_minute: Ending minute of working time (0-59).
 
     Returns:
         A dictionary where keys are dates and values are lists of free time slots 
@@ -42,9 +46,9 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str):
             event for event in recurring_ical_events.of(calendar).between(current_date, current_date_future)
         ]
 
-        # Define working hours (9 am to 5 pm)
-        work_start = datetime.datetime.combine(current_date, datetime.time(9, 0))
-        work_end = datetime.datetime.combine(current_date, datetime.time(17, 0))
+        # Define working hours using user input
+        work_start = datetime.datetime.combine(current_date, datetime.time(work_start_hour, work_start_minute))
+        work_end = datetime.datetime.combine(current_date, datetime.time(work_end_hour, work_end_minute))
 
         # Initialize free time slots with the entire working hours
         free_times = [(work_start, work_end)]
@@ -105,14 +109,53 @@ with st.form(key="free_time_form"):
                                  value=default_end,
                                  help="Select the end date for checking free time slots")
     
+    # Create a row with two columns for working hours
+    st.write("**Working Hours**")
+    work_hours_col1, work_hours_col2 = st.columns(2)
+    
+    with work_hours_col1:
+        # Working hours start time with default of 9:00 AM
+        work_start_hour = st.number_input("Start Hour", 
+                                         min_value=0, 
+                                         max_value=23,
+                                         value=9,
+                                         help="Working hours start time (hour)",
+                                         step=1)
+        
+        work_start_minute = st.number_input("Start Minute", 
+                                           min_value=0, 
+                                           max_value=59,
+                                           value=0,
+                                           help="Working hours start time (minute)",
+                                           step=5)
+    
+    with work_hours_col2:
+        # Working hours end time with default of 5:00 PM
+        work_end_hour = st.number_input("End Hour", 
+                                       min_value=0, 
+                                       max_value=23,
+                                       value=17,
+                                       help="Working hours end time (hour)",
+                                       step=1)
+        
+        work_end_minute = st.number_input("End Minute", 
+                                         min_value=0, 
+                                         max_value=59,
+                                         value=0,
+                                         help="Working hours end time (minute)",
+                                         step=5)
+    
     # Submit button
     submit_button = st.form_submit_button(label="Find Free Time Slots")
 
 # Process and display results when form is submitted
 if submit_button:
-    # Input validation
+    # Input validation for dates
     if start_date > end_date:
         st.error("Error: Start date must be before end date.")
+    # Input validation for working hours
+    elif (work_start_hour > work_end_hour) or (work_start_hour == work_end_hour and work_start_minute >= work_end_minute):
+        st.error("Error: Working hours end time must be after start time.")
     else:
         # Show loading message
         with st.spinner("Fetching calendar data and finding free time slots..."):
@@ -121,8 +164,16 @@ if submit_button:
                 start_date_str = start_date.strftime("%Y-%m-%d")
                 end_date_str = end_date.strftime("%Y-%m-%d")
                 
-                # Call the function to get free times
-                free_times_by_date = get_free_times_for_date_range(ics_url, start_date_str, end_date_str)
+                # Call the function to get free times with customized working hours
+                free_times_by_date = get_free_times_for_date_range(
+                    ics_url, 
+                    start_date_str, 
+                    end_date_str,
+                    work_start_hour,
+                    work_start_minute,
+                    work_end_hour,
+                    work_end_minute
+                )
                 
                 # Display results
                 st.subheader("Available Free Time Slots")
@@ -174,6 +225,7 @@ if submit_button:
 
 # Add some informational text at the bottom
 st.info("""
-**Note**: This application displays free time slots between 9 AM and 5 PM for the selected date range.
+**Note**: This application displays free time slots between your selected working hours for the selected date range.
 It uses the calendar data from the provided ICS URL to determine availability.
+You can customize your working hours using the input fields above.
 """)
