@@ -9,7 +9,7 @@ import icalendar
 st.set_page_config(page_title="Free Time Slot Finder", layout="wide")
 
 # Function to get free times (from the provided code)
-def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_start_hour=9, work_start_minute=0, work_end_hour=17, work_end_minute=0):
+def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_start_hour=9, work_end_hour=17, timezone="ET"):
     """
     Retrieves free time slots between user-defined working hours for each date within a range.
 
@@ -18,9 +18,8 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
         start_date_str: Start date string in YYYY-MM-DD format.
         end_date_str: End date string in YYYY-MM-DD format.
         work_start_hour: Starting hour of working time (0-23).
-        work_start_minute: Starting minute of working time (0-59).
         work_end_hour: Ending hour of working time (0-23).
-        work_end_minute: Ending minute of working time (0-59).
+        timezone: Timezone display label (e.g., "ET", "PT", "GMT").
 
     Returns:
         A dictionary where keys are dates and values are lists of free time slots 
@@ -47,8 +46,8 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
         ]
 
         # Define working hours using user input
-        work_start = datetime.datetime.combine(current_date, datetime.time(work_start_hour, work_start_minute))
-        work_end = datetime.datetime.combine(current_date, datetime.time(work_end_hour, work_end_minute))
+        work_start = datetime.datetime.combine(current_date, datetime.time(work_start_hour, 0))
+        work_end = datetime.datetime.combine(current_date, datetime.time(work_end_hour, 0))
 
         # Initialize free time slots with the entire working hours
         free_times = [(work_start, work_end)]
@@ -109,41 +108,35 @@ with st.form(key="free_time_form"):
                                  value=default_end,
                                  help="Select the end date for checking free time slots")
     
-    # Create a row with two columns for working hours
-    st.write("**Working Hours**")
-    work_hours_col1, work_hours_col2 = st.columns(2)
+    # Create a row with two columns for working hours and timezone
+    st.write("**Working Hours & Timezone**")
+    work_hours_col1, work_hours_col2, timezone_col = st.columns(3)
     
     with work_hours_col1:
-        # Working hours start time with default of 9:00 AM
+        # Working hours start time
         work_start_hour = st.number_input("Start Hour", 
                                          min_value=0, 
                                          max_value=23,
                                          value=9,
                                          help="Working hours start time (hour)",
                                          step=1)
-        
-        work_start_minute = st.number_input("Start Minute", 
-                                           min_value=0, 
-                                           max_value=59,
-                                           value=0,
-                                           help="Working hours start time (minute)",
-                                           step=5)
     
     with work_hours_col2:
-        # Working hours end time with default of 5:00 PM
+        # Working hours end time
         work_end_hour = st.number_input("End Hour", 
                                        min_value=0, 
                                        max_value=23,
                                        value=17,
                                        help="Working hours end time (hour)",
                                        step=1)
-        
-        work_end_minute = st.number_input("End Minute", 
-                                         min_value=0, 
-                                         max_value=59,
-                                         value=0,
-                                         help="Working hours end time (minute)",
-                                         step=5)
+    
+    with timezone_col:
+        # Timezone selector
+        timezone_options = ["ET", "CT", "MT", "PT", "GMT", "CET", "JST", "AEST"]
+        timezone = st.selectbox("Timezone",
+                               options=timezone_options,
+                               index=0,
+                               help="Select your timezone")
     
     # Submit button
     submit_button = st.form_submit_button(label="Find Free Time Slots")
@@ -154,7 +147,7 @@ if submit_button:
     if start_date > end_date:
         st.error("Error: Start date must be before end date.")
     # Input validation for working hours
-    elif (work_start_hour > work_end_hour) or (work_start_hour == work_end_hour and work_start_minute >= work_end_minute):
+    elif work_start_hour >= work_end_hour:
         st.error("Error: Working hours end time must be after start time.")
     else:
         # Show loading message
@@ -164,15 +157,14 @@ if submit_button:
                 start_date_str = start_date.strftime("%Y-%m-%d")
                 end_date_str = end_date.strftime("%Y-%m-%d")
                 
-                # Call the function to get free times with customized working hours
+                # Call the function to get free times with customized working hours and timezone
                 free_times_by_date = get_free_times_for_date_range(
                     ics_url, 
                     start_date_str, 
                     end_date_str,
                     work_start_hour,
-                    work_start_minute,
                     work_end_hour,
-                    work_end_minute
+                    timezone
                 )
                 
                 # Display results
@@ -214,8 +206,8 @@ if submit_button:
                                 # Join all time slots with commas
                                 time_slots_str = ", ".join(time_slots)
                                 
-                                # Display in the requested format
-                                st.write(f"**{formatted_date}**: {time_slots_str} ET")
+                                # Display in the requested format with the selected timezone
+                                st.write(f"**{formatted_date}**: {time_slots_str} {timezone}")
                                 
                                 st.write("---")  # Add a separator between dates
                 
@@ -227,5 +219,5 @@ if submit_button:
 st.info("""
 **Note**: This application displays free time slots between your selected working hours for the selected date range.
 It uses the calendar data from the provided ICS URL to determine availability.
-You can customize your working hours using the input fields above.
+You can customize your working hours and timezone using the input fields above.
 """)
