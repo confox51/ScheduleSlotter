@@ -47,6 +47,10 @@ def get_free_times_for_date_range(ics_url, start_date_str, end_date_str, work_st
         events_for_day = [
             event for event in recurring_ical_events.of(calendar).between(current_date, current_date_future)
         ]
+        # Handle all-day events: if any event is date-only, mark the day as fully booked
+        if any(isinstance(event["DTSTART"].dt, datetime.date) and not isinstance(event["DTSTART"].dt, datetime.datetime) for event in events_for_day):
+            free_times_by_date[current_date] = []
+            continue
 
         # Define working hours using user input
         work_start = datetime.datetime.combine(current_date, datetime.time(work_start_hour, 0))
@@ -214,7 +218,7 @@ if submit_button:
                             formatted_date = f"{date.month}/{date.day} ({weekday})"
                             
                             if not free_times:
-                                st.write(f"**{formatted_date}**: No free time slots available")
+                                st.write(f"**{formatted_date}**: No times available.")
                             else:
                                 # Create formatted list of time slots
                                 time_slots = []
